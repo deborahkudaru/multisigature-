@@ -28,7 +28,11 @@ contract Multisig {
         uint indexed nonce
     );
     event TransactionApproved(uint256 indexed nonce, address indexed owner);
-    event TransactionExecuted(uint indexed nonce, address indexed to, uint amount);
+    event TransactionExecuted(
+        uint indexed nonce,
+        address indexed to,
+        uint amount
+    );
 
     constructor(address[] memory _owners, uint _setApprovals) {
         require(_owners.length > 0, "At least one owner");
@@ -64,14 +68,14 @@ contract Multisig {
         transactions[_nonce].noOfApprovals += 1;
 
         emit TransactionApproved(_nonce, msg.sender);
-
-        if (transactions[_nonce].noOfApprovals >= setApprovals) {
-            // executeTransaction(_nonce);
-        }
     }
 
     function executeTransaction(uint _nonce) external {
-          require(isOwner[msg.sender], "only owners can execute a transaction");
+        require(isOwner[msg.sender], "only owners can execute a transaction");
+        require(
+            transactions[_nonce].noOfApprovals >= setApprovals,
+            "Not enough number of approvals"
+        );
         approvals[_nonce][msg.sender] = true;
         transactions[_nonce].isExecuted = true;
         (bool success, ) = transactions[_nonce].to.call{
@@ -79,6 +83,10 @@ contract Multisig {
         }("");
         require(success, "Cannot call");
 
-        emit TransactionExecuted(_nonce, transactions[_nonce].to, transactions[_nonce].amount);
+        emit TransactionExecuted(
+            _nonce,
+            transactions[_nonce].to,
+            transactions[_nonce].amount
+        );
     }
 }
