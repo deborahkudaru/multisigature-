@@ -22,9 +22,13 @@ contract Multisig {
     uint public numberOfTransactions;
 
     // declare an event that will be ommitted when the transaction is proposed
-    event CreateTransaction(address indexed to, uint indexed amount, uint indexed nonce);
+    event CreateTransaction(
+        address indexed to,
+        uint indexed amount,
+        uint indexed nonce
+    );
     event TransactionApproved(uint256 indexed nonce, address indexed owner);
-
+    event TransactionExecuted(uint indexed nonce, address indexed to, uint amount);
 
     constructor(address[] memory _owners, uint _setApprovals) {
         require(_owners.length > 0, "At least one owner");
@@ -55,19 +59,26 @@ contract Multisig {
     }
 
     function approveTransactions(uint _nonce) external {
-        // require(msg.sender = owners, "only owners can approve a transaction");
+        require(isOwner[msg.sender], "only owners can approve a transaction");
         approvals[_nonce][msg.sender] = true;
-        transactions[_nonce].noOfApprovals += 1; 
+        transactions[_nonce].noOfApprovals += 1;
 
         emit TransactionApproved(_nonce, msg.sender);
 
-        if(transactions[_nonce].noOfApprovals >= setApprovals){
+        if (transactions[_nonce].noOfApprovals >= setApprovals) {
             // executeTransaction(_nonce);
         }
-
     }
 
-    function executeTransaction(uint _nonce) external{
-        
+    function executeTransaction(uint _nonce) external {
+          require(isOwner[msg.sender], "only owners can execute a transaction");
+        approvals[_nonce][msg.sender] = true;
+        transactions[_nonce].isExecuted = true;
+        (bool success, ) = transactions[_nonce].to.call{
+            value: transactions[_nonce].amount
+        }("");
+        require(success, "Cannot call");
+
+        emit TransactionExecuted(_nonce, transactions[_nonce].to, transactions[_nonce].amount);
     }
 }
